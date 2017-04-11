@@ -1,0 +1,238 @@
+---
+title: "termEnrichment"
+author: "Thomas Schwarzl"
+date: "`r doc_date()`"
+package: "`r pkg_ver('termEnrichment')`"
+abstract: >
+  Easy enrichment analysis for diverse annotation of features (e.g. GO terms, protein domains, pathways, .. ). The package provides testing against background, parallelisation for fast computation and visualisation.
+vignette: >
+  %\VignetteIndexEntry{Bioconductor style for HTML documents}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+output: 
+  BiocStyle::html_document
+---
+
+# Introduction 
+
+This package simplifies the enrichment analysis for annotation for features (e.g. GO terms, protein domains, pathways, .. ) against a background. The annotations are called *terms*. 
+
+All (or selected) terms will be tested for overrepresentation. By default, the package uses right-sided fisher exact test and tests for overrepresentation, however also two-sided or left-sided test can be performed. Multiple hypothesis testing correction is applied and significant enriched terms are marked.
+
+For fast computation, the package provides parallisation using the `r Biocpkg("BiocParallel")`. If you have this package installed you can choose the *parallel = TRUE* parameter to parallise the tests.  
+
+The results of the overrepresentation analysis can be visualized with a plotting function provided by the package. The log~2~ odds ratios are displayed of the significant terms. The signficance is displayed by the coßlours of the bars. 
+
+# Quickstart 
+
+## Inputs
+
+The inputs for the analysis are:
+
+1. a term table looking with an *ID* column and one *term* column (*termTable*)
+
+ID       |  term
+---------|------
+GeneA    | term1
+GeneB    | term1
+GeneB    | term2
+GeneC    | term3
+GeneD    | term1
+GemeD    | term4
+ ..      | .. 
+
+2. a vector of features to test for (*foregroundIDs*): e.g. GeneA, GeneC
+3. optional: a vector of features for background correction (*backgroundIDs*): e.g. GeneA, GeneB, GeneC, GeneD, ..
+4. optional: *annotation* for the terms
+
+term  | name               | ..
+------|--------------------|----
+term1 | Descriptive Name   | .. 
+term2 | Other Name         | ..
+term3 | Wanted             | ..
+..    | ..                 | ..
+
+## Calculation
+
+The calculation of the enrichment for all terms in the termTable can be performed with a single command:
+
+```{r, eval=F}
+X <- termEnrichment(termTable, foregroundIDs, backgroundIDs, annotation)
+```
+
+Alternatively, if you want to use all features from the termTable as background, and do not have any annotation you can use this call:
+
+```{r, eval=F}
+X <- termEnrichment(termTable, foregroundIDs)
+```
+
+If you have *BiocParallel* installed, you can use *parallel = TRUE* for using multiple cores of a machine.
+
+```{r, eval = F}
+X <- termEnrichment(termTable, foregroundIDs, backgroundIDs, annotation, parallel = TRUE)
+```
+
+## Visualisation
+
+The output *X* is a tibble with the fisher exact test p.values and odd Ratios which can be plottet using the *plotEnrichment* function
+
+```{r, eval=F}
+plotEnrichment(X)
+```
+
+
+# Examples
+
+## Loading example data
+
+The package makes use of r CRANpkg("tibble")`, r CRANpkg("dplyr")` and r CRANpkg("ggplot2")`. Here we load all required packages.
+
+```{r, message=FALSE, prompt=FALSE}
+require(termEnrichment)
+require(dplyr)
+require(ggplot2)
+require(tibble)
+```
+
+
+### Term tables
+
+In the next step we load the term tables, *yeastGO* and *yeastInterPro* are tibbles (or data.frames) with two columns each. The first columns are the ID column which uniquely identify a feature. The second column is the term column which annotates a features with a term (GO term or InterPro Domain in our case).
+
+
+First for GO terms
+```{r}
+data("yeastGO", package = "termEnrichment")
+head(yeastGO)
+```
+
+Then for InterPro Domains
+```{r}
+data("yeastInterPro", package = "termEnrichment")
+head(yeastInterPro)
+```
+
+
+### Foreground and Background IDs
+
+Next we get a list (vector) of identifiers for the foreground and the background IDs which correspond to the ids in the annotation table.
+
+```{r}
+data("foregroundIDs", package = "termEnrichment")
+data("backgroundIDs", package = "termEnrichment")
+```
+
+The foregroundIDs could be significantly enriched genes in a study.
+
+```{r}
+foregroundIDs
+```
+
+The backgroundIDs would be all identified genes in the study
+
+```{r}
+head(backgroundIDs)
+```
+
+Please note, that all foregroundIDs must be contained in the backgroundID list!
+
+### Annotation tables (optional)
+
+Here we load optional tables, *yeastGOdesc* and *yeastInterProDesc* which describe the "terms". The first column of those tables are the term identifier and the other columns are annotations. Please note, that this table is not needed for the analysis, if your terms are descriptive enough, you can skip this step.
+
+```{r}
+data("yeastGOdesc", package = "termEnrichment")
+head(yeastGOdesc)
+```
+
+```{r}
+data("yeastInterProDesc", package = "termEnrichment")
+head(yeastInterProDesc)
+```
+
+Please also note that the annotation table can only have one term per row. 
+
+## Analysis
+
+### Using a background 
+
+The analysis is very simple. Here we test for the overrepresentation of all the terms in the annotation table yeastGO.
+
+
+```{r, echo = FALSE, eval = FALSE}
+# debugging purpose onlye
+termTable <- yeastGO 
+annotation <- yeastGOdesc
+terms = NULL
+padj.cutoff = 0.05
+padj.method = "BH"
+alternative = "greater"
+parallel = FALSE
+```
+
+```{r}
+GOenrichment       <- termEnrichment(yeastGO, foregroundIDs, backgroundIDs, yeastGOdesc)
+InterProEnrichment <- termEnrichment(yeastInterPro, foregroundIDs, backgroundIDs, yeastInterProDesc)
+```
+
+By default, the function performs right-sided fisher exact tests for all the terms in the data sets. That means it tests for overrepresentation rather than underrepresentation. If you want to test for both sides, you can use the parameter 'alternative = "two.sides".
+Use *?fisher.test* for more info.
+
+Then it does multiple hypothesis testing correction, by default Benjamini-Hochberg. You can change the method to your liking with the parameter `padj.method`.
+
+*GOenrichment* is a tibble consisting of the results of the GOenrichment
+
+```{r}
+head(GOenrichment)
+```
+
+The Interpro anlaysis did show just one significant results
+
+```{r}
+head(InterProEnrichment)
+```
+
+For plotting the results you can use the plotting function
+
+```{r}
+plotEnrichment(GOenrichment %>% mutate( name = gsub(pattern=", ", replacement = "\n", name)))
+```
+
+If you are oldschool, you can use the parameter *gg = FALSE* to get a standard barplot instead of a ggplot2 barplot.
+
+```{r}
+plotEnrichment(GOenrichment %>% mutate( name = gsub(pattern=", ", replacement = "\n", name)), gg = F)
+```
+
+
+If there are no significant results, a message would be displayed. The minimum terms displayed is 1.
+
+```{r}
+plotEnrichment(InterProEnrichment)
+```
+
+By default, only significant results will be displayed (which is highly recommended). For displaying non-significant results, you can set the parameter *onlySignificant* to false. 
+
+```{r}
+plotEnrichment(InterProEnrichment, onlySignificant = F)
+```
+
+### Without background
+
+If you do not have a background list, or the background is the whole genome you can run the command without the background list. Then the script assumes that all the genes of the annotation table are background.
+
+```{r, eval = F}
+GOenrichment.no.background <- termEnrichment(yeastGO, foregroundIDs, annotation = yeastGOdesc)
+```
+
+Please note that using a background list is very important for correct testing.
+
+
+# Session info
+
+The sessionInfo() information.
+
+```{r, echo = FALSE}
+sessionInfo()
+```
+
