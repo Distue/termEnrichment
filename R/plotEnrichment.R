@@ -74,11 +74,8 @@ plotEnrichment <- function(X, nameColumn = ifelse(any(colnames(X) == "name"), "n
         }
 
         if( gg ) {
-            X <- X  %>% arrange(desc(oddsRatio)) %>% mutate(log2oddsRatio = log2(oddsRatio))
-            #X <- X %>% reorder(nameColumn, -X$log2oddsRatio)
-            #mutate(id = factor(id, levels = rev(id)))
-
-            ggplot(X, aes_string(x = nameColumn, "log2oddsRatio", fill="p.adj")) +
+            ggplot(X  %>% arrange(desc(oddsRatio)) %>% mutate(log2oddsRatio = log2(oddsRatio)),
+                   aes_string(paste0("reorder(",nameColumn,", -log2oddsRatio)"), y = "log2oddsRatio", fill="p.adj")) +
                 geom_bar(stat = "identity") +
                 theme_minimal(base_size = 16) +
                 theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
