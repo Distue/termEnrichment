@@ -19,11 +19,12 @@ This package simplifies the enrichment analysis for annotation for features (e.g
 
 All (or selected) terms will be tested for overrepresentation. By default, the package uses right-sided fisher exact test and tests for overrepresentation, however also two-sided or left-sided test can be performed. Multiple hypothesis testing correction is applied and significant enriched terms are marked.
 
-For fast computation, the package provides parallisation using the `r Biocpkg("BiocParallel")`. If you have this package installed you can choose the *parallel = TRUE* parameter to parallise the tests.  
+For fast computation, the package provides parallisation using the `r Biocpkg("BiocParallel")` package. If you have this package installed you can choose the *parallel = TRUE* parameter to parallise the tests.  
 
-The results of the overrepresentation analysis can be visualized with a plotting function provided by the package. The log~2~ odds ratios are displayed of the significant terms. The signficance is displayed by the coßlours of the bars. 
-
+The results of the overrepresentation analysis can be visualized with a plotting function provided by the package. The log~2~ odds ratios are displayed of the significant terms. The signficance is displayed by the colours of the bars. 
+ 
 # Quickstart 
+
 
 ## Inputs
 
@@ -38,7 +39,7 @@ GeneB    | term1
 GeneB    | term2
 GeneC    | term3
 GeneD    | term1
-GemeD    | term4
+GeneD    | term4
  ..      | .. 
 
 2. a vector of features to test for (*foregroundIDs*): e.g. GeneA, GeneC
@@ -52,7 +53,7 @@ term2 | Other Name         | ..
 term3 | Wanted             | ..
 ..    | ..                 | ..
 
-## Calculation
+## Analysis
 
 The calculation of the enrichment for all terms in the termTable can be performed with a single command:
 
@@ -85,7 +86,7 @@ plotEnrichment(X)
 
 ## Loading example data
 
-The package makes use of r CRANpkg("tibble")`, r CRANpkg("dplyr")` and r CRANpkg("ggplot2")`. Here we load all required packages.
+The package makes use of `r CRANpkg("tibble")`, `r CRANpkg("dplyr")` and `r CRANpkg("ggplot2")`. Here we load all required packages.
 
 ```{r, message=FALSE, prompt=FALSE}
 require(termEnrichment)
@@ -145,34 +146,52 @@ data("yeastGOdesc", package = "termEnrichment")
 head(yeastGOdesc)
 ```
 
-```{r}
-data("yeastInterProDesc", package = "termEnrichment")
-head(yeastInterProDesc)
-```
+For the InterPro domain data we will not provide any additional annotation.
 
 Please also note that the annotation table can only have one term per row. 
 
 ## Analysis
 
-### Using a background 
+### Testing using background 
 
 The analysis is very simple. Here we test for the overrepresentation of all the terms in the annotation table yeastGO.
 
 
 ```{r, echo = FALSE, eval = FALSE}
-# debugging purpose onlye
+# debugging purpose only
 termTable <- yeastGO 
 annotation <- yeastGOdesc
+permutations = 10
 terms = NULL
 padj.cutoff = 0.05
 padj.method = "BH"
 alternative = "greater"
 parallel = FALSE
+quiet = T
+dropIDs = F
+correction = F
+removeDuplicatedTerms = T
 ```
 
-```{r}
+```{r, echo = FALSE, eval = FALSE}
+# debugging purpose only
+termTable <- yeastInterPro 
+annotation <- NULL
+permutations = 10
+terms = NULL
+padj.cutoff = 0.05
+padj.method = "BH"
+alternative = "greater"
+parallel = FALSE
+quiet = T
+dropIDs = F
+correction = F
+removeDuplicatedTerms = T
+```
+
+```{r, echo=FALSE}
 GOenrichment       <- termEnrichment(yeastGO, foregroundIDs, backgroundIDs, yeastGOdesc)
-InterProEnrichment <- termEnrichment(yeastInterPro, foregroundIDs, backgroundIDs, yeastInterProDesc)
+InterProEnrichment <- termEnrichment(yeastInterPro, foregroundIDs, backgroundIDs)
 ```
 
 By default, the function performs right-sided fisher exact tests for all the terms in the data sets. That means it tests for overrepresentation rather than underrepresentation. If you want to test for both sides, you can use the parameter 'alternative = "two.sides".
@@ -195,12 +214,12 @@ head(InterProEnrichment)
 For plotting the results you can use the plotting function
 
 ```{r}
-plotEnrichment(GOenrichment %>% mutate( name = gsub(pattern=", ", replacement = "\n", name)))
+plotEnrichment(GOenrichment %>% mutate( name = gsub(pattern=", ", replacement = "\n", name)), nameColumn = "name")
 ```
 
-If you are oldschool, you can use the parameter *gg = FALSE* to get a standard barplot instead of a ggplot2 barplot.
 
-```{r}
+```{r, echo=FALSE,eval=FALSE}
+# If you are oldschool, you can use the parameter *gg = FALSE* to get a standard barplot instead of a ggplot2 barplot.
 plotEnrichment(GOenrichment %>% mutate( name = gsub(pattern=", ", replacement = "\n", name)), gg = F)
 ```
 
@@ -217,7 +236,7 @@ By default, only significant results will be displayed (which is highly recommen
 plotEnrichment(InterProEnrichment, onlySignificant = F)
 ```
 
-### Without background
+### Testing without background correction
 
 If you do not have a background list, or the background is the whole genome you can run the command without the background list. Then the script assumes that all the genes of the annotation table are background.
 
@@ -227,12 +246,25 @@ GOenrichment.no.background <- termEnrichment(yeastGO, foregroundIDs, annotation 
 
 Please note that using a background list is very important for correct testing.
 
-
 # Session info
 
 The sessionInfo() information.
 
 ```{r, echo = FALSE}
 sessionInfo()
+```
+
+
+
+
+
+
+```{r}
+#
+#calculate#
+#
+##    # create list of randomly selected genes with the length of foreground list
+#   SAMPLED.LIST <- LAPPLY(1:permutations, function(x) sample_n(BACKGROUND, nrow(FOREGROUND), replace = FALSE))
+#
 ```
 

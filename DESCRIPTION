@@ -1,13 +1,14 @@
 Package: termEnrichment
 Type: Package
 Title: Easy enrichment testing for multiple terms over a background
-Version: 0.2.0
+Version: 0.2.1
 biocViews: GeneSetEnrichment
 Author: Thomas Schwarzl, Wolfgang Huber
 Maintainer: Thomas Schwarzl <schwarzl@embl.de>
 Description: This packages tests for overrepresentation for multiple termes (e.g.
     GO terms, protein domains, pathways) for a set of features against a
-    background. It uses BiocParallel for fast computation and provides
+    background. Enrichment is calculated using Fisher's exact test. 
+    It uses BiocParallel for fast computation and provides
     visualisation for the enriched terms.
 Imports: tibble, dplyr, ggplot2, graphics, utils, stats
 Depends: R (>= 3.3)

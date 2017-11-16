@@ -1,4 +1,4 @@
+library(testthat)
+test_check("testthat")
 
-#test_that("termEnrichment works fine", {
-#    TRUE
-#})
+

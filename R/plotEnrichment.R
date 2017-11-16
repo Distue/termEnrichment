@@ -15,6 +15,7 @@
 #' @author Thomas Schwarzl <schwarzl@embl.de>
 #' @import tibble
 #' @import dplyr
+#' @importFrom stats reorder
 #' @import ggplot2
 #' @export
 #' @usage plotEnrichment(X, nameColumn, onlySignificant,
@@ -29,13 +30,27 @@
 #'
 #' X <- termEnrichment(yeastGO, foregroundIDs, backgroundIDs, annotation = yeastGOdesc)
 #' plotEnrichment(X)
-plotEnrichment <- function(X, nameColumn = "name", onlySignificant = TRUE,
+plotEnrichment <- function(X, nameColumn = ifelse(any(colnames(X) == "name"), "name", "term"), onlySignificant = TRUE,
                            maxDisplay = 20, verbose = TRUE, gg = TRUE,
                            las = 2, oma = NULL, ...) {
-    stopifnot(is.character(nameColumn))
-    stopifnot(is.data.frame(X) || is.tibble(X))
-    stopifnot(any(colnames(X) == nameColumn))
-    stopifnot(all(c("oddsRatio", "significant", "p.adj") %in% colnames(X)))
+    if(! (is.character(nameColumn) || is.null(nameColumn)) ) {
+        stop("'nameColumn' has to be a character string or NULL if not defined")
+    }
+
+    if(is.null(nameColumn)) {
+        nameColumn <- "term"
+    }
+
+    if(! (is.data.frame(X) || is.tibble(X)) ) {
+        stop("'X' has to be a data.frame or a tibble")
+    }
+
+    if(! any(colnames(X) == nameColumn))
+        stop(paste0("Column names of X do not contain nameColumn (currently: ", nameColumn, ")."))
+
+    if(! all(c("oddsRatio", "significant", "p.adj") %in% colnames(X)))
+        stop("X must contain columns \"oddsRatio\", \"significant\" and \"p.adj\"")
+
 
     par.bkup <- par()
 
@@ -59,8 +74,11 @@ plotEnrichment <- function(X, nameColumn = "name", onlySignificant = TRUE,
         }
 
         if( gg ) {
+            X <- X  %>% arrange(desc(oddsRatio)) %>% mutate(log2oddsRatio = log2(oddsRatio))
+            #X <- X %>% reorder(nameColumn, -X$log2oddsRatio)
+            #mutate(id = factor(id, levels = rev(id)))
 
-            ggplot(X, aes(reorder(name, -oddsRatio), log2(oddsRatio), fill=p.adj)) +
+            ggplot(X, aes_string(x = nameColumn, "log2oddsRatio", fill="p.adj")) +
                 geom_bar(stat = "identity") +
                 theme_minimal(base_size = 16) +
                 theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
