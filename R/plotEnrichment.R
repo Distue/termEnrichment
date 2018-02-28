@@ -62,9 +62,25 @@ plotEnrichment <- function(X, nameColumn = ifelse(any(colnames(X) == "name"), "n
         X <- X %>% dplyr::filter(significant == TRUE)
     }
 
-    # if there are no terms
+    # if there are no terms, display a message if verbose and print an empty graph
     if( nrow(X) <= 0  ) {
         if( verbose ) message("No terms to display.")
+        if( gg ) {
+            ggplot(data = data.frame(label="No significant results", x=1, y=1), aes(x=x, y=y, label=label)) +
+                geom_text() +
+                theme_minimal() +
+                xlab("") + ylab("") +
+                theme(axis.ticks=element_blank(),
+                      axis.text=element_blank(),
+                      panel.border = element_blank(),
+                      axis.ticks.y=element_blank(),
+                      panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank())
+        } else {
+            plot.new()
+            text(x = 0.5, y = 0.5, labels = "No significant results")
+        }
+
     } else {
         # if there are too many terms, just select the maximum to display
         if ( nrow(X) >= maxDisplay ) {
