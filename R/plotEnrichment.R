@@ -51,6 +51,9 @@ plotEnrichment <- function(X, nameColumn = ifelse(any(colnames(X) == "name"), "n
     if(! all(c("oddsRatio", "significant", "p.adj") %in% colnames(X)))
         stop("X must contain columns \"oddsRatio\", \"significant\" and \"p.adj\"")
 
+    # replace all na's or empty spaces with the original term
+    X <- X %>% mutate_(nameColumn = ifelse(is.na(nameColumn), "term", nameColumn))
+
 
     par.bkup <- par()
 
