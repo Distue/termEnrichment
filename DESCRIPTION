@@ -10,7 +10,7 @@ Description: This packages tests for overrepresentation for multiple termes (e.g
     background. Enrichment is calculated using Fisher's exact test. 
     It uses BiocParallel for fast computation and provides
     visualisation for the enriched terms.
-Imports: tibble, dplyr, ggplot2, graphics, utils, stats
+Imports: tibble, dplyr, ggplot2, graphics, utils, stats, lazyeval
 Depends: R (>= 3.3)
 Suggests: testthat, roxygen2, BiocParallel
 License: MIT

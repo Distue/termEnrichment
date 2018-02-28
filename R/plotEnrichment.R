@@ -52,8 +52,8 @@ plotEnrichment <- function(X, nameColumn = ifelse(any(colnames(X) == "name"), "n
         stop("X must contain columns \"oddsRatio\", \"significant\" and \"p.adj\"")
 
     # replace all na's or empty spaces with the original term
-    X <- X %>% mutate_(nameColumn = ifelse(is.na(nameColumn), "term", nameColumn))
-
+    call = lazyeval::interp(~ ifelse( is.na(a), term, a), a = as.name(nameColumn))
+    X <- X %>% mutate_(.dots = setNames(list(call), nameColumn))
 
     par.bkup <- par()
 
