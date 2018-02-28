@@ -12,7 +12,7 @@ Description: This packages tests for overrepresentation for multiple termes (e.g
     visualisation for the enriched terms.
 Imports: tibble, dplyr, ggplot2, graphics, utils, stats, lazyeval
 Depends: R (>= 3.3)
-Suggests: testthat, roxygen2, BiocParallel
+Suggests: testthat, roxygen2, BiocParallel, IHW
 License: MIT
 Encoding: UTF-8
 LazyData: true

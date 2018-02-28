@@ -11,7 +11,7 @@
 #' @param permutations number of permutations used for caluclating mean background ranks for random samples data
 #' @param correction logical. TRUE if p-value correction is applied
 #' @param padj.cutoff cutoff for p.adjusted value
-#' @param padj.method p adjustment method for fisher exact test, see ?fisher.test
+#' @param padj.method p adjustment method, default is "ihw" see ?ihw, other options are "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none" from ?p.adjust
 #' @param alternative alternative hypothesis for fisher exact test, see ?fisher.test
 #' @param parallel logical the testing be parallised with BiocParallel
 #' @param quiet non verbose output
@@ -43,7 +43,7 @@
 
 termEnrichment <- function(termTable, foregroundIDs, backgroundIDs = NULL,
                            annotation = NULL, terms = NULL, permutations = 1e2,
-                           correction = F, padj.cutoff = 0.05, padj.method = "BH",
+                           correction = F, padj.cutoff = 0.05, padj.method = "IHW",
                            alternative = "greater", parallel = F,
                            dropIDs = F,  quiet = F, removeDuplicatedTerms = T,
                            ...) {
@@ -170,8 +170,20 @@ termEnrichment <- function(termTable, foregroundIDs, backgroundIDs = NULL,
                                     alternative = alternative,
                                     ...)
 
+    # calculation of length of gene signature
+    RESULTS <- RESULTS %>% mutate(signature.length = unlist(lapply(terms, function(x) {
+        termTable %>% filter(term == x) %>% nrow
+    })))
+
     # multiple testing correction
-    RESULTS <- RESULTS %>% mutate(p.adj = p.adjust(p.value, method = padj.method))
+    if ( padj.method == "IHW" ) {
+        ihwRes <- ihw(p.value ~ signature.length,  data = RESULTS, alpha = padj.cutoff)
+
+        RESULTS <- RESULTS %>% mutate(p.adj = adj_pvalues(ihwRes),
+                                      IHW.weights = weights(ihwRes))
+    } else {
+        RESULTS <- RESULTS %>% mutate(p.adj = p.adjust(p.value, method = padj.method))
+    }
 
     # classification of significance using a cutoff
     RESULTS <- RESULTS %>% mutate(significant = p.adj < padj.cutoff)
