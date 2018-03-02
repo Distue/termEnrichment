@@ -111,7 +111,7 @@ termEnrichment <- function(termTable, foregroundIDs, backgroundIDs = NULL,
                 backgroundIDs <- backgroundIDs[ backgroundIDs %in% termTable$ID ]
             } else {
                 stop(paste0("not all backgroundIDs are found in the ID columns of termTable",
-                            " e.g.(", backgroundIDs[ ! backgroundIDs %in% termTable$ID ] %>% head,")"))
+                            " e.g.(", paste(backgroundIDs[ ! backgroundIDs %in% termTable$ID ] %>% head, collapse = " "),")"))
             }
         }
     }
@@ -125,14 +125,14 @@ termEnrichment <- function(termTable, foregroundIDs, backgroundIDs = NULL,
             foregroundIDs <- foregroundIDs[ foregroundIDs %in% termTable$ID ]
         } else {
             stop(paste0("not all foregroundIDs are found in the ID columns of termTable",
-                        " e.g.(", foregroundIDs[ ! foregroundIDs %in% termTable$ID ] %>% head,")"))
+                        " e.g.(", paste(foregroundIDs[ ! foregroundIDs %in% termTable$ID ] %>% head, collapse = " "),")"))
         }
     }
 
     # assert that all foreground IDs are found in the background list
     if(! foregroundIDs %in% backgroundIDs %>% all)
         stop(paste0("not all foregroundIDs are found in backgroundIDs",
-                    "(", foregroundIDs[! foregroundIDs %in% backgroundIDs] %>% head ,")"))
+                    "(", paste(foregroundIDs[! foregroundIDs %in% backgroundIDs] %>% head, collapse = " ") ,")"))
 
     # ----------- SETUP -------------
     # if terms is NULL all terms will be tested
