@@ -7,7 +7,8 @@
 #' @param onlySignificant logical. display only signficant results if TRUE. significance is determined by column "significant"
 #' @param maxDisplay numeric. maximum number of terms to display
 #' @param verbose logical. hides messages if FALSE
-#' @param gg logical. use ggplot2 if TRUE. dafault: TRUE
+#' @param gg logical. use ggplot2 if TRUE. default: TRUE
+#' @param ratioType type of ratio to display. "oddsRatio", "ratio" - default "oddsRatio"
 #' @param las numeric grapnical parameter las
 #' @param oma vector graphical parameter oma
 #' @param ... graphical parameters
@@ -31,7 +32,7 @@
 #' X <- termEnrichment(yeastGO, foregroundIDs, backgroundIDs, annotation = yeastGOdesc)
 #' plotEnrichment(X)
 plotEnrichment <- function(X, nameColumn = ifelse(any(colnames(X) == "name"), "name", "term"), onlySignificant = TRUE,
-                           maxDisplay = 20, verbose = TRUE, gg = TRUE,
+                           maxDisplay = 20, verbose = TRUE, gg = TRUE, ratioType = "oddsRatio",
                            las = 2, oma = NULL, ...) {
     if(! (is.character(nameColumn) || is.null(nameColumn)) ) {
         stop("'nameColumn' has to be a character string or NULL if not defined")
@@ -48,8 +49,18 @@ plotEnrichment <- function(X, nameColumn = ifelse(any(colnames(X) == "name"), "n
     if(! any(colnames(X) == nameColumn))
         stop(paste0("Column names of X do not contain nameColumn (currently: ", nameColumn, ")."))
 
-    if(! all(c("oddsRatio", "significant", "p.adj") %in% colnames(X)))
-        stop("X must contain columns \"oddsRatio\", \"significant\" and \"p.adj\"")
+    if(! typeRatio %in% c("oddsRatio", "ratio"))
+        stop("typeRatio must be either \"oddsRatio\" or \"ratio\"")
+
+    if(! all(c("significant", "p.adj") %in% colnames(X)))
+        stop("X must contain columns \"significant\" and \"p.adj\"")
+
+    if(typeRatio == "oddsRatio" && ! "oddsRatio" %in% colnames(X))
+        stop("X must contain columns \"oddsRatio\"")
+
+    if(typeRatio == "ratio" && ! "ratio" %in% colnames(X))
+        stop("X must contain columns \"ratio\"")
+
 
     # replace all na's or empty spaces with the original term
     call = lazyeval::interp(~ ifelse( is.na(a), term, a), a = as.name(nameColumn))
@@ -62,7 +73,7 @@ plotEnrichment <- function(X, nameColumn = ifelse(any(colnames(X) == "name"), "n
         X <- X %>% dplyr::filter(significant == TRUE)
     }
 
-    # if there are no terms, display a message if verbose and print an empty graph
+    # if there are no terms, display a message if verbose and print an empty plot
     if( nrow(X) <= 0  ) {
         if( verbose ) message("No terms to display.")
         if( gg ) {
@@ -93,15 +104,21 @@ plotEnrichment <- function(X, nameColumn = ifelse(any(colnames(X) == "name"), "n
         }
 
         if( gg ) {
-            ggplot(X  %>% arrange(desc(oddsRatio)) %>% mutate(log2oddsRatio = log2(oddsRatio)),
-                   aes_string(paste0("reorder(",nameColumn,", -log2oddsRatio)"), y = "log2oddsRatio", fill="p.adj")) +
+            if(ratioType == "oddsRatio") {
+                p <- ggplot(X  %>% arrange(desc(oddsRatio)) %>% mutate(log2oddsRatio = log2(oddsRatio)),
+                       aes_string(paste0("reorder(",nameColumn,", -log2oddsRatio)"), y = "log2oddsRatio", fill="p.adj"))
+            } else if (ratioType == "ratio") {
+                p <- ggplot(X  %>% arrange(desc(ratio)),
+                            aes_string(paste0("reorder(",nameColumn,", -ratio)"), y = "ratio", fill="p.adj"))
+            }
+            p <- p +
                 geom_bar(stat = "identity") +
                 theme_minimal(base_size = 16) +
                 theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
                 ylab(expression("log"[2]*" odds ratio")) +
                 xlab("") +
                 scale_fill_continuous(guide = guide_legend(title = "p-adjusted"))
-
+            p
         } else {
 
             if( is.null(oma) ){
@@ -109,10 +126,16 @@ plotEnrichment <- function(X, nameColumn = ifelse(any(colnames(X) == "name"), "n
             }
 
             par(lty = 0, oma = oma)
-            barplot(log2(X %>% .[["oddsRatio"]]),
-                    ylab = expression("log"[2]*" odds ratio"),
-                    names = (X %>% .[[nameColumn]]), las = las, ...)
 
+            if(ratioType == "oddsRatio") {
+                barplot(log2(X %>% .[["oddsRatio"]]),
+                        ylab = expression("log"[2]*" odds ratio"),
+                        names = (X %>% .[[nameColumn]]), las = las, ...)
+            } else if(ratioType == "ratio") {
+                barplot(log2(X %>% .[["ratio"]]),
+                        ylab = "ratio",
+                        names = (X %>% .[[nameColumn]]), las = las, ...)
+            }
             par(lty = par.bkup$lty, oma = par.bkup$oma)
         }
     }
