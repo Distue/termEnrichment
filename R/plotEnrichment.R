@@ -32,7 +32,7 @@
 #' X <- termEnrichment(yeastGO, foregroundIDs, backgroundIDs, annotation = yeastGOdesc)
 #' plotEnrichment(X)
 plotEnrichment <- function(X, nameColumn = ifelse(any(colnames(X) == "name"), "name", "term"), onlySignificant = TRUE,
-                           maxDisplay = 20, verbose = TRUE, gg = TRUE, ratioType = "oddsRatio",
+                           maxDisplay = 20, verbose = TRUE, gg = TRUE,  ratioType = "oddsRatio",
                            las = 2, oma = NULL, ...) {
     if(! (is.character(nameColumn) || is.null(nameColumn)) ) {
         stop("'nameColumn' has to be a character string or NULL if not defined")
@@ -49,16 +49,16 @@ plotEnrichment <- function(X, nameColumn = ifelse(any(colnames(X) == "name"), "n
     if(! any(colnames(X) == nameColumn))
         stop(paste0("Column names of X do not contain nameColumn (currently: ", nameColumn, ")."))
 
-    if(! typeRatio %in% c("oddsRatio", "ratio"))
-        stop("typeRatio must be either \"oddsRatio\" or \"ratio\"")
+    if(! ratioType %in% c("oddsRatio", "ratio"))
+        stop("ratioType must be either \"oddsRatio\" or \"ratio\"")
 
     if(! all(c("significant", "p.adj") %in% colnames(X)))
         stop("X must contain columns \"significant\" and \"p.adj\"")
 
-    if(typeRatio == "oddsRatio" && ! "oddsRatio" %in% colnames(X))
+    if(ratioType == "oddsRatio" && ! "oddsRatio" %in% colnames(X))
         stop("X must contain columns \"oddsRatio\"")
 
-    if(typeRatio == "ratio" && ! "ratio" %in% colnames(X))
+    if(ratioType == "ratio" && ! "ratio" %in% colnames(X))
         stop("X must contain columns \"ratio\"")
 
 
