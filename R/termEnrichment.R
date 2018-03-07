@@ -244,13 +244,15 @@ termEnrichment <- function(termTable, foregroundIDs, backgroundIDs = NULL,
 # provide precalculated table for some annotations
 # as argument
 
-.calculateEnrichment <- function(FOREGROUND, BACKGROUND, terms, LAPPLY = lapply, alternative = "greater", ...) {
+.calculateEnrichment <- function(FOREGROUND, UNIVERSE, terms, LAPPLY = lapply, alternative = "greater", ...) {
     # statistical testing
     TESTRESULTS <- LAPPLY(terms, function(x) {
+        BACKGROUND <- UNIVERSE %>% filter(!ID %in% FOREGROUND[,"ID"])
         bg.in  <- BACKGROUND %>% filter(term == x) %>% nrow
-        bg.out <- (backgroundIDs %>% length) - bg.in
+        bg.out <- (BACKGROUND %>% nrow) - bg.in
         fg.in  <- FOREGROUND %>% filter(term == x) %>% nrow
-        fg.out <- (foregroundIDs %>% length) - fg.in
+        fg.out <- (FOREGROUND %>% nrow) - fg.in
+        stopifnot(sum(c(bg.in, bg.out, fg.in, fg.out)) != nrow(UNIVERSE))
 
         ctable            <- matrix(c(fg.in, fg.out, bg.in, bg.out), ncol = 2, nrow = 2)
         significance.test <- fisher.test(ctable, alternative = alternative, ...)

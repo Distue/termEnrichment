@@ -1,7 +1,7 @@
 Package: termEnrichment
 Type: Package
 Title: Easy enrichment testing for multiple terms over a background
-Version: 0.2.2
+Version: 0.2.3
 biocViews: GeneSetEnrichment
 Author: Thomas Schwarzl, Wolfgang Huber
 Maintainer: Thomas Schwarzl <schwarzl@embl.de>
