@@ -43,7 +43,7 @@ GeneD    | term4
  ..      | .. 
 
 2. a vector of features to test for (*foregroundIDs*): e.g. GeneA, GeneC
-3. optional: a vector of features for background correction (*backgroundIDs*): e.g. GeneA, GeneB, GeneC, GeneD, ..
+3. optional: a vector of features for background correction (*universeIDs*): e.g. GeneA, GeneB, GeneC, GeneD, ..
 4. optional: *annotation* for the terms
 
 term  | name               | ..
@@ -58,7 +58,7 @@ term3 | Wanted             | ..
 The calculation of the enrichment for all terms in the termTable can be performed with a single command:
 
 ```{r, eval=F}
-X <- termEnrichment(termTable, foregroundIDs, backgroundIDs, annotation)
+X <- termEnrichment(termTable, foregroundIDs, universeIDs, annotation)
 ```
 
 Alternatively, if you want to use all features from the termTable as background, and do not have any annotation you can use this call:
@@ -70,7 +70,7 @@ X <- termEnrichment(termTable, foregroundIDs)
 If you have *BiocParallel* installed, you can use *parallel = TRUE* for using multiple cores of a machine.
 
 ```{r, eval = F}
-X <- termEnrichment(termTable, foregroundIDs, backgroundIDs, annotation, parallel = TRUE)
+X <- termEnrichment(termTable, foregroundIDs, universeIDs, annotation, parallel = TRUE)
 ```
 
 ## Visualisation
@@ -120,7 +120,7 @@ Next we get a list (vector) of identifiers for the foreground and the background
 
 ```{r}
 data("foregroundIDs", package = "termEnrichment")
-data("backgroundIDs", package = "termEnrichment")
+data("universeIDs", package = "termEnrichment")
 ```
 
 The foregroundIDs could be significantly enriched genes in a study.
@@ -129,13 +129,13 @@ The foregroundIDs could be significantly enriched genes in a study.
 foregroundIDs
 ```
 
-The backgroundIDs would be all identified genes in the study
+The universeIDs would be all identified genes in the study
 
 ```{r}
-head(backgroundIDs)
+head(universeIDs)
 ```
 
-Please note, that all foregroundIDs must be contained in the backgroundID list!
+Please note, that all foregroundIDs must be contained in the universeID list!
 
 ### Annotation tables (optional)
 
@@ -190,8 +190,8 @@ removeDuplicatedTerms = T
 ```
 
 ```{r, echo=FALSE}
-GOenrichment       <- termEnrichment(yeastGO, foregroundIDs, backgroundIDs, yeastGOdesc)
-InterProEnrichment <- termEnrichment(yeastInterPro, foregroundIDs, backgroundIDs)
+GOenrichment       <- termEnrichment(yeastGO, foregroundIDs, universeIDs, yeastGOdesc)
+InterProEnrichment <- termEnrichment(yeastInterPro, foregroundIDs, universeIDs)
 ```
 
 By default, the function performs right-sided fisher exact tests for all the terms in the data sets. That means it tests for overrepresentation rather than underrepresentation. If you want to test for both sides, you can use the parameter 'alternative = "two.sides".
@@ -253,8 +253,6 @@ The sessionInfo() information.
 ```{r, echo = FALSE}
 sessionInfo()
 ```
-
-
 
 
 

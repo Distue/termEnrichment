@@ -4,26 +4,36 @@
 \alias{termEnrichment}
 \title{termEnrichment}
 \usage{
-termEnrichment(termTable, foregroundIDs, backgroundIDs, annotation, terms, padj.cutoff, padj.method, alternative, parallel)
+termEnrichment(termTable, foregroundIDs, universeIDs, annotation, terms, padj.cutoff, padj.method, alternative, parallel, removeDuplicatedTerms)
 }
 \arguments{
 \item{termTable}{data.frame or tibble ID where first column is an ID column and the second column are associated terms to be tested against}
 
 \item{foregroundIDs}{vector of IDs defining the foreground (must be same IDs as is first column of termTable)}
 
-\item{backgroundIDs}{vector of IDs defining the background (must be same IDs as is first column of termTable)}
+\item{universeIDs}{vector of IDs defining the universe (must be same IDs as is first column of termTable)}
 
 \item{annotation}{data.frame or tibble annotating terms (first column must be term identifier)}
 
 \item{terms}{specifies what terms will be tested for. tests all existing terms if NULL}
 
+\item{permutations}{number of permutations used for caluclating mean background ranks for random samples data}
+
+\item{correction}{logical. TRUE if p-value correction is applied}
+
 \item{padj.cutoff}{cutoff for p.adjusted value}
 
-\item{padj.method}{p adjustment method for fisher exact test, see ?fisher.test}
+\item{padj.method}{p adjustment method, default is "ihw" see ?ihw, other options are "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none" from ?p.adjust}
 
 \item{alternative}{alternative hypothesis for fisher exact test, see ?fisher.test}
 
 \item{parallel}{logical the testing be parallised with BiocParallel}
+
+\item{quiet}{non verbose output}
+
+\item{removeDuplicatedTerms}{removes duplicated terms in termTable if necessary}
+
+\item{...}{parameter list forwarded to fisher.test functions}
 }
 \value{
 tibble annotated analysis results
@@ -35,11 +45,11 @@ of background features.
 \examples{
 
 data(yeastGO)
-data(backgroundIDs)
+data(universeIDs)
 data(foregroundIDs)
 data(yeastGOdesc)
 
-termEnrichment(yeastGO, foregroundIDs, backgroundIDs,
+termEnrichment(yeastGO, foregroundIDs, universeIDs,
                annotation = yeastGOdesc)
 }
 \author{

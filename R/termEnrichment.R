@@ -5,7 +5,7 @@
 #'
 #' @param termTable data.frame or tibble ID where first column is an ID column and the second column are associated terms to be tested against
 #' @param foregroundIDs vector of IDs defining the foreground (must be same IDs as is first column of termTable)
-#' @param backgroundIDs vector of IDs defining the background (must be same IDs as is first column of termTable)
+#' @param universeIDs vector of IDs defining the universe (must be same IDs as is first column of termTable)
 #' @param annotation data.frame or tibble annotating terms (first column must be term identifier)
 #' @param terms specifies what terms will be tested for. tests all existing terms if NULL
 #' @param permutations number of permutations used for caluclating mean background ranks for random samples data
@@ -30,18 +30,18 @@
 #' @importFrom utils head
 #' @return tibble annotated analysis results
 #' @export
-#' @usage termEnrichment(termTable, foregroundIDs, backgroundIDs, annotation, terms, padj.cutoff, padj.method, alternative, parallel, removeDuplicatedTerms)
+#' @usage termEnrichment(termTable, foregroundIDs, universeIDs, annotation, terms, padj.cutoff, padj.method, alternative, parallel, removeDuplicatedTerms)
 #' @examples
 #'
 #' data(yeastGO)
-#' data(backgroundIDs)
+#' data(universeIDs)
 #' data(foregroundIDs)
 #' data(yeastGOdesc)
 #'
-#' termEnrichment(yeastGO, foregroundIDs, backgroundIDs,
+#' termEnrichment(yeastGO, foregroundIDs, universeIDs,
 #'                annotation = yeastGOdesc)
 
-termEnrichment <- function(termTable, foregroundIDs, backgroundIDs = NULL,
+termEnrichment <- function(termTable, foregroundIDs, universeIDs = NULL,
                            annotation = NULL, terms = NULL, permutations = 1e2,
                            correction = F, padj.cutoff = 0.05, padj.method = "IHW",
                            alternative = "greater", parallel = F,
@@ -51,9 +51,9 @@ termEnrichment <- function(termTable, foregroundIDs, backgroundIDs = NULL,
     if(! (nrow(termTable) > 0 && ncol(termTable) == 2))
         stop("'termTable' has to have 2 columns, first one being the ID column, second one the term column.")
 
-    if(! (is.null(backgroundIDs) || length(backgroundIDs) > 0))
-        stop(paste0("'backgroundIDs' cannot be empty, if you have no background ids, ",
-             "set 'backgroundIDs = NULL' (current length: ", length(backgroundIDs), ", head: ", head(backgroundIDs), ")"))
+    if(! (is.null(universeIDs) || length(universeIDs) > 0))
+        stop(paste0("'universeIDs' cannot be empty, if you have no background ids, ",
+             "set 'universeIDs = NULL' (current length: ", length(universeIDs), ", head: ", head(universeIDs), ")"))
 
     if(! length(foregroundIDs) > 0)
         stop(paste0("'foregroundIDs' cannot be empty (current length: ", length(foregroundIDs), ")"))
@@ -71,9 +71,9 @@ termEnrichment <- function(termTable, foregroundIDs, backgroundIDs = NULL,
         stop(paste0("ID column of 'termTable' (", class(termTable[,"ID"]), ") ",
                     "has a different class than 'foregroundIDs' (", class(foregroundIDs),")"))
 
-    if(!is.null(backgroundIDs) && class(termTable %>% .[["ID"]]) != class(backgroundIDs))
+    if(!is.null(universeIDs) && class(termTable %>% .[["ID"]]) != class(universeIDs))
         stop(paste0("ID column of 'termTable' (", class(termTable[,"ID"]), ") ",
-                    "has a different class than 'backgroundIDs' (", class(backgroundIDs),")"))
+                    "has a different class than 'universeIDs' (", class(universeIDs),")"))
 
     # check that no rows are duplicated
     if( (termTable %>% duplicated %>% any)) {
@@ -95,23 +95,23 @@ termEnrichment <- function(termTable, foregroundIDs, backgroundIDs = NULL,
     }
 
     # if no background list was specified
-    if( is.null(backgroundIDs) ) {
+    if( is.null(universeIDs) ) {
         # set all ids from the mapping table as background
-        backgroundIDs = termTable %>% .[["ID"]] %>% sort %>% unique
+        universeIDs = termTable %>% .[["ID"]] %>% sort %>% unique
     } else {
         # assert that all background IDs are found  in the mapping table
-        if(! backgroundIDs %in% termTable$ID %>% all) {
+        if(! universeIDs %in% termTable$ID %>% all) {
             # if dropIDs is TRUE, drop all IDs not found in the termTable
             if(dropIDs) {
                 # if we would lose all the IDs, raise error
-                if( (! backgroundIDs %in% termTable$ID) %>% all )
+                if( (! universeIDs %in% termTable$ID) %>% all )
                     stop("None of the background IDs were in the 'termTable' ID column.")
 
-                cat(paste0(sum(! backgroundIDs %in% termTable$ID), " background IDs were dropped\n"))
-                backgroundIDs <- backgroundIDs[ backgroundIDs %in% termTable$ID ]
+                cat(paste0(sum(! universeIDs %in% termTable$ID), " background IDs were dropped\n"))
+                universeIDs <- universeIDs[ universeIDs %in% termTable$ID ]
             } else {
-                stop(paste0("not all backgroundIDs are found in the ID columns of termTable",
-                            " e.g.(", paste(backgroundIDs[ ! backgroundIDs %in% termTable$ID ] %>% head, collapse = " "),")"))
+                stop(paste0("not all universeIDs are found in the ID columns of termTable",
+                            " e.g.(", paste(universeIDs[ ! universeIDs %in% termTable$ID ] %>% head, collapse = " "),")"))
             }
         }
     }
@@ -130,9 +130,9 @@ termEnrichment <- function(termTable, foregroundIDs, backgroundIDs = NULL,
     }
 
     # assert that all foreground IDs are found in the background list
-    if(! foregroundIDs %in% backgroundIDs %>% all)
-        stop(paste0("not all foregroundIDs are found in backgroundIDs",
-                    "(", paste(foregroundIDs[! foregroundIDs %in% backgroundIDs] %>% head, collapse = " ") ,")"))
+    if(! foregroundIDs %in% universeIDs %>% all)
+        stop(paste0("not all foregroundIDs are found in universeIDs",
+                    "(", paste(foregroundIDs[! foregroundIDs %in% universeIDs] %>% head, collapse = " ") ,")"))
 
     # ----------- SETUP -------------
     # if terms is NULL all terms will be tested
@@ -150,7 +150,7 @@ termEnrichment <- function(termTable, foregroundIDs, backgroundIDs = NULL,
     }
 
     # generate a subset for background and foreground
-    BACKGROUND <- termTable %>% dplyr::filter(ID %in% backgroundIDs)
+    BACKGROUND <- termTable %>% dplyr::filter(ID %in% universeIDs)
     FOREGROUND <- termTable %>% dplyr::filter(ID %in% foregroundIDs)
 
     # parallelize
