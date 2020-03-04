@@ -150,8 +150,10 @@ termEnrichment <- function(termTable, foregroundIDs, universeIDs = NULL,
     }
 
     # generate a subset for background and foreground
-    BACKGROUND <- termTable %>% dplyr::filter(ID %in% universeIDs)
-    FOREGROUND <- termTable %>% dplyr::filter(ID %in% foregroundIDs)
+    UNIVERSE    <- termTable %>% dplyr::filter(ID %in% universeIDs) 
+    UNIVERSE_WITH_FG <- UNIVERSE %>% mutate(FG = ID %in% foregroundIDs)
+    FOREGROUND  <- UNIVERSE %>% dplyr::filter(ID %in% foregroundIDs)
+    BACKGROUND  <- UNIVERSE %>% dplyr::filter(!ID %in% foregroundIDs)
 
     # parallelize
     if ( parallel ) {
@@ -165,16 +167,15 @@ termEnrichment <- function(termTable, foregroundIDs, universeIDs = NULL,
     if(!quiet)
         cat("calculating enrichment\n")
 
+    
     # calculate Fisher's exact test for provided gene lists
-    RESULTS <- .calculateEnrichment(FOREGROUND, BACKGROUND, terms, LAPPLY = LAPPLY,
+    RESULTS <- .calculateEnrichment(UNIVERSE_WITH_FG, 
+                                    #FOREGROUND, BACKGROUND,
+                                    terms, LAPPLY = LAPPLY,
                                     alternative = alternative,
                                     ...)
-
-    # calculation of length of gene signature
-    RESULTS <- RESULTS %>% mutate(signature.length = unlist(lapply(terms, function(x) {
-        termTable %>% filter(term == x) %>% nrow
-    })))
-
+    
+    
     # multiple testing correction
     if ( padj.method == "IHW" ) {
         ihwRes <- ihw(p.value ~ signature.length,  data = RESULTS, alpha = padj.cutoff)
@@ -197,7 +198,7 @@ termEnrichment <- function(termTable, foregroundIDs, universeIDs = NULL,
 
     if(correction) {
         # create list of randomly selected genes with the length of foreground list
-        SAMPLED.LIST <- LAPPLY(1:permutations, function(x) sample_n(BACKGROUND, nrow(FOREGROUND), replace = FALSE))
+        SAMPLED.LIST <- LAPPLY(1:permutations, function(x) sample_n(UNIVERSE, nrow(FOREGROUND), replace = FALSE))
 
         # calculate the significance and ranks
         if(!quiet)
@@ -205,7 +206,7 @@ termEnrichment <- function(termTable, foregroundIDs, universeIDs = NULL,
         SAMPLED.RESULTLIST <- LAPPLY(SAMPLED.LIST, function(x) {
             if(!quiet)
                 cat(".")
-            .calculateEnrichment(x, BACKGROUND, terms, LAPPLY = LAPPLY, alternative = alternative, ...)
+            .calculateEnrichment(UNIVERSE %>% mutate(FG = ID %in% x$ID), BACKGROUND, terms, LAPPLY = LAPPLY, alternative = alternative, ...)
         })
         if(!quiet)
             cat("\n")
@@ -244,34 +245,59 @@ termEnrichment <- function(termTable, foregroundIDs, universeIDs = NULL,
 # provide precalculated table for some annotations
 # as argument
 
-.calculateEnrichment <- function(FOREGROUND, UNIVERSE, terms, LAPPLY = lapply, alternative = "greater", ...) {
+.calculateEnrichment <- function(UNIVERSE, #FOREGROUND, BACKGROUND,
+                                 terms, LAPPLY = lapply, alternative = "greater", ...) {
     # statistical testing
     TESTRESULTS <- LAPPLY(terms, function(x) {
-        BACKGROUND <- UNIVERSE %>% filter(!ID %in% FOREGROUND[,"ID"])
-        bg.in  <- BACKGROUND %>% filter(term == x) %>% nrow
-        bg.out <- (BACKGROUND %>% nrow) - bg.in
-        fg.in  <- FOREGROUND %>% filter(term == x) %>% nrow
-        fg.out <- (FOREGROUND %>% nrow) - fg.in
-        stopifnot(sum(c(bg.in, bg.out, fg.in, fg.out)) != nrow(UNIVERSE))
+        UNIVERSEANNO <- UNIVERSE %>% mutate(TERM = term == x) %>% 
+            group_by(ID) %>% summarize(FG = any(FG), TERM = any(TERM) ) %>%
+                                 mutate(   FG.IN = FG & TERM,
+                                            FG.OUT = FG & !TERM, 
+                                            BG.IN = !FG & TERM,
+                                            BG.OUT = !FG & !TERM) #%>% 
+                   #   
+        
+        
+        fg.in.ids         <- UNIVERSEANNO %>% filter(FG.IN) %>% select(ID) %>% distinct()
+        bg.in             <- UNIVERSEANNO %>% filter(BG.IN) %>% select(ID) %>% distinct() %>% nrow
+        bg.out            <- UNIVERSEANNO %>% filter(BG.OUT) %>% select(ID) %>% distinct() %>% nrow
+        fg.in             <- fg.in.ids %>% nrow
+        fg.out            <- UNIVERSEANNO %>% filter(FG.OUT) %>% select(ID) %>% distinct() %>% nrow
+        
+        
+        #if( sum(c(bg.in, bg.out, fg.in, fg.out)) != nrow(UNIVERSEANNO) ) {
+        #    save(list=c("UNIVERSEANNO", "x"), file = "debug.Rdata")
+        #    stop("calculation error, numbers do not correspond to input")
+        #}
 
         ctable            <- matrix(c(fg.in, fg.out, bg.in, bg.out), ncol = 2, nrow = 2)
         significance.test <- fisher.test(ctable, alternative = alternative, ...)
         oddsRatio         <- as.numeric(significance.test$estimate)
         p.value           <- significance.test$p.value
+        
+        signature.length  <- bg.in + fg.in
+        
 
-        return(c("oddsRatio"      = oddsRatio,
-                 "p.value"        = p.value,
-                 "foreground.in"  = fg.in,
-                 "foreground.out" = fg.out,
-                 "background.in"  = bg.in,
-                 "background.out" = bg.out))
+        return(c("term"             = x,
+                 "oddsRatio"        = oddsRatio,
+                 "p.value"          = p.value,
+                 "foreground.in"    = fg.in,
+                 "foreground.out"   = fg.out,
+                 "background.in"    = bg.in,
+                 "background.out"   = bg.out,
+                 "signature.length" = signature.length,
+                 "fg.in.ids"        = paste(fg.in.ids %>% .[["ID"]], collapse = "|")))
     })
 
     # create a matrix
-    TESTRESULTS <- do.call(rbind, TESTRESULTS)
-
-    # add terms and convert to tibble
-    TESTRESULTS <- data.frame(term = terms, TESTRESULTS, stringsAsFactors = FALSE) %>% as.tibble
+    TESTRESULTS <- do.call(bind_rows, TESTRESULTS) %>% mutate(
+          oddsRatio = as.numeric(oddsRatio),
+          p.value = as.numeric(p.value),
+          foreground.in = as.numeric(foreground.in),
+          foreground.out = as.numeric(foreground.out),
+          background.in = as.numeric(background.in),
+          background.out = as.numeric(background.out),
+          signature.length = as.numeric(signature.length))
 
     # calculating ranks based on p-values
     TESTRESULTS <- TESTRESULTS %>% mutate(p.value.rank = rank(p.value))
